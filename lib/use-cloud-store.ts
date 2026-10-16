@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {readStore,writeStore,type StoreKey} from './supabase';
+import {readStore,writeStore,type StoreKey} from './backend';
 export function useCloudStore<T>(key:StoreKey,initial:T){
  const [value,setValue]=useState(initial);const [loading,setLoading]=useState(true);const [error,setError]=useState('');const current=useRef(initial);const ready=useRef(false);const queue=useRef(Promise.resolve());
  const reload=useCallback(async()=>{try{const remote=await readStore<T>(key);current.current=remote;setValue(remote);ready.current=true;setError('')}catch(e){setError(e instanceof Error?e.message:'მონაცემები ვერ ჩაიტვირთა.')}finally{setLoading(false)}},[key]);

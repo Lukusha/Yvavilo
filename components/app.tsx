@@ -13,7 +13,7 @@ import { estimatedDays, flowerState, formatDate, nextDate, occasionDays } from '
 import type { AuthUser, Bouquet, FlowerDelivery, Notification, Occasion, Order, Recipient } from '@/types';
 import { OccasionModal, PersonModal } from '@/components/person-modal';
 import { daysAgoLabel, daysUntil, deliveryTimeLabel, flowerLabels, georgianDate, georgianMonth, occasionLabel, orderStatusLabel, relationshipLabel, remainingDays } from '@/lib/locale';
-import { getSession, saveRecipient, submitOrder } from '@/lib/supabase';
+import { getSession, saveRecipient, submitOrder } from '@/lib/backend';
 
 const iconSize = 18;
 const cx = (...names:(string|false|undefined)[]) => names.filter(Boolean).join(' ');

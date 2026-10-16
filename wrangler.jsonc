@@ -1,9 +1,20 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "yvavilo",
+  "main": "./worker.ts",
   "compatibility_date": "2026-10-16",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yvavilo-db",
+      "database_id": "a3ad6b7c-d161-4412-b368-81d57e2ab805",
+      "migrations_dir": "./migrations"
+    }
+  ],
   "assets": {
     "directory": "./out",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "single-page-application"
   }

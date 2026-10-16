@@ -3,10 +3,10 @@ node_modules
 .next
 *.tsbuildinfo
 .pnpm-store
+.wrangler
 *-preview.png
 
 out
 .env*
-!.env.example
 *-preview.jpg
 Products/

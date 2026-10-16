@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import type {Order} from '@/types';
-import {rpc} from '@/lib/supabase';
+import {rpc} from '@/lib/backend';
 import {orderStatusLabel} from '@/lib/locale';
 type StaffOrder=Order&{customerEmail:string;customerName:string};
 export function Operations(){

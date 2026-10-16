@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Check, X } from 'lucide-react';
 import type { FlowerType, Occasion, Recipient } from '@/types';
-import { photoUrl } from '@/lib/supabase';
+import { photoUrl } from '@/lib/backend';
 import {useEffect} from 'react';
 import { flowerLabels, georgianMonth, relationshipLabel } from '@/lib/locale';
 

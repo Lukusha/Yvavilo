@@ -2,9 +2,9 @@
 
 Eight user-supplied photos were edited with the built-in imagegen tool. Final web assets are in `public/images/collection/`. Product names and source prices come from the eight Florarium links supplied by the owner. Every displayed selling price is exactly 30% above its supplied source price.
 
-The landing page displays all eight cards without requiring authentication. For the account store, run `supabase/collection.sql` after the existing schema/catalog setup. Products are initially inactive so supplier availability and exact flower composition can be checked before accepting orders. Existing prices and activation status are preserved when re-importing. No live database was configured during this change.
+The landing page displays all eight cards without requiring authentication. The same products are seeded as active account-catalog records by `migrations/0001_initial.sql`. Product prices are validated by the Worker before an order request is accepted. Supplier availability and flower composition still require business verification.
 
-`data/collection.json` is the shared collection metadata. After editing it, run `node scripts/build-collection.mjs` to refresh the SQL import. Mixed-bouquet freshness metadata requires florist verification before activation.
+`data/collection.json` is the shared collection metadata. Mixed-bouquet freshness metadata requires florist verification.
 
 ## Base editing prompt
 
