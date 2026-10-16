@@ -18,7 +18,7 @@ export const occasionLabels: Record<string,string> = {
  'Thank you':'მადლობა', Custom:'სხვა'
 };
 export const occasionLabel = (value:string) => occasionLabels[value] || value;
-export const orderStatusLabel = (status:Order['status']) => status==='Delivered'?'მიტანილია':'დაგეგმილია';
+export const orderStatusLabel = (status:Order['status']) => ({Pending:'ელოდება დადასტურებას',Confirmed:'დადასტურებულია',Cancelled:'გაუქმებულია',Delivered:'მიტანილია',Scheduled:'დაგეგმილია'})[status];
 export const deliveryTimeLabel = (value:string) => ({Morning:'დილით',Afternoon:'შუადღით',Evening:'საღამოს','Morning, 9am–12pm':'დილით, 9:00–12:00','Afternoon, 12pm–4pm':'შუადღით, 12:00–16:00','Evening, 4pm–7pm':'საღამოს, 16:00–19:00'} as Record<string,string>)[value] || value;
 export const daysUntil = (days:number) => days===0?'დღეს':`${days} დღეში`;
 export const daysAgoLabel = (days:number) => `${days} დღის წინ`;

@@ -3,3 +3,8 @@ node_modules
 *.tsbuildinfo
 .pnpm-store
 *-preview.png
+
+out
+.env*
+!.env.example
+*-preview.jpg

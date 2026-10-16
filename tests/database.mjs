@@ -1,0 +1,48 @@
+import {createRequire} from 'node:module';
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url);
+const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+const db=new PGlite();
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
+create schema auth;create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
+create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+grant usage on schema auth to authenticated,anon,service_role;
+create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);alter table storage.objects enable row level security;
+create function storage.foldername(name text) returns text[] language sql as $$select string_to_array(name,'/')$$;
+grant usage on schema storage to authenticated;grant all on storage.objects to authenticated;
+`);
+const schema=(await readFile(new URL('../supabase/schema.sql',import.meta.url),'utf8')).replace('create extension if not exists pgcrypto;','');
+await db.exec(schema);await db.exec(schema);await db.exec(await readFile(new URL('../supabase/catalog.sql',import.meta.url),'utf8'));
+const a='00000000-0000-4000-8000-000000000001',b='00000000-0000-4000-8000-000000000002';
+await db.query(`insert into auth.users values($1,'a@example.test','{"name":"A"}'),($2,'b@example.test','{"name":"B"}')`,[a,b]);
+async function asUser(id){await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated')}
+async function fails(sql,params=[]){await assert.rejects(db.query(sql,params))}
+await asUser(a);
+const person={id:'person-a',name:'დედა',address:'თბილისი, ტესტის ქუჩა 1',birthday:'10-24',initials:'დ',preferredColors:[],preferredFlowers:[]};
+await db.query('select save_person($1,$2)',[person,{name:'გაცნობა',date:'05-20'}]);
+assert.equal((await db.query('select * from recipients')).rows.length,1);
+assert.equal((await db.query('select * from occasions')).rows.length,2);
+await db.query('insert into occasions(id,user_id,recipient_id,data) values($1,$2,$3,$4)',['extra',a,person.id,{name:'მეორე წლისთავი',date:'12-10',type:'Anniversary'}]);
+await db.query('select save_person($1)',[{...person,name:'დედიკო'}]);assert.equal((await db.query('select * from occasions')).rows.length,3,'editing person preserves separately added dates');
+await db.query("delete from occasions where id='birthday-person-a'");
+assert.equal((await db.query('select data from recipients')).rows[0].data.birthday,undefined,'deleting standard day clears profile field');
+await fails('insert into occasions(id,user_id,recipient_id,data) values($1,$2,$3,$4)',['bad',a,'not-mine',{name:'no',date:'10-12'}]);
+await asUser(b);assert.equal((await db.query('select * from recipients')).rows.length,0,'other account cannot see recipients');assert.equal((await db.query('select * from occasions')).rows.length,0,'other account cannot see dates');
+await fails('insert into recipients(id,user_id,data) values($1,$2,$3)',['attack',a,{}]);
+const payload={id:'order-a',recipientId:'person-a',bouquetId:'red-roses',deliveryDate:'2099-01-01',deliveryTime:'Morning, 9am–12pm',price:1,status:'Delivered',message:'Hello'};
+await fails('select place_order($1)',[payload]);
+await asUser(a);await fails('select place_order($1)',[payload]); // inactive product
+await db.exec("reset role;update products set active=true where id='red-roses';");await asUser(a);
+const first=(await db.query('select place_order($1) as result',[payload])).rows[0].result;assert.equal(first.price,89,'server price overrides client');assert.equal(first.status,'Pending','client cannot forge fulfillment');
+await db.query('select place_order($1)',[payload]);assert.equal((await db.query('select * from orders')).rows.length,1,'retry is idempotent');
+await fails("update orders set data='{}'");await fails('select fulfill_order($1,$2)',[payload.id,'Delivered']);await fails('select staff_orders()');
+await asUser(b);assert.equal((await db.query('select * from orders')).rows.length,0,'orders are isolated');
+await db.exec('reset role');await db.query('insert into staff values($1)',[b]);await asUser(b);assert.equal((await db.query('select staff_orders()')).rows.length,1);await db.query('select fulfill_order($1,$2)',[payload.id,'Confirmed']);await db.query('select fulfill_order($1,$2)',[payload.id,'Delivered']);await fails('select fulfill_order($1,$2)',[payload.id,'Delivered']);
+await asUser(a);assert.equal((await db.query('select * from deliveries')).rows.length,1);assert.equal((await db.query('select * from notifications')).rows.length,3);
+await db.query('insert into storage.objects(bucket_id,name) values($1,$2)',['profile-photos',a+'/photo.jpg']);await asUser(b);assert.equal((await db.query('select * from storage.objects')).rows.length,0,'photos are isolated');await fails('insert into storage.objects(bucket_id,name) values($1,$2)',['profile-photos',a+'/attack.jpg']);
+await db.exec('reset role');await db.query('insert into occasions(id,user_id,recipient_id,data) values($1,$2,$3,$4)',['today',a,person.id,{name:'დღეს',date:new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Tbilisi',month:'2-digit',day:'2-digit'}).format(new Date()).replace('/','-')}]);
+await db.exec('select enqueue_reminders();select enqueue_reminders();');assert.equal((await db.query("select * from notifications where id like 'occasion-today-%'")).rows.length,1,'reminders deduplicate');
+await db.query(`insert into push_subscriptions(user_id,endpoint,subscription,created_at) values($1,$2,$3,now()-interval '2 days')`,[a,'https://fcm.googleapis.com/test',{endpoint:'https://fcm.googleapis.com/test'}]);
+await db.exec('select enqueue_reminders()');const claimed=(await db.query('select claim_push_jobs()')).rows;assert.ok(claimed.length>0,'push jobs created');assert.equal((await db.query('select claim_push_jobs()')).rows.length,0,'leased push jobs cannot be claimed twice');await asUser(a);await fails('select claim_push_jobs()');
+console.log('PASS: schema reapply, two-account isolation, private photos, date preservation, server prices, order idempotency, staff fulfillment, reminder deduplication.');await db.close();

@@ -2,7 +2,29 @@
   "name": "yvavilo",
   "version": "1.0.0",
   "private": true,
-  "scripts": { "dev": "next dev --webpack", "build": "next build --webpack", "start": "next start", "lint": "tsc --noEmit" },
-  "dependencies": { "next": "16.3.4", "react": "19.2.6", "react-dom": "19.2.6", "lucide-react": "1.45.0" },
-  "devDependencies": { "typescript": "^5.9.3", "@types/node": "^22.19.19", "@types/react": "^19.2.14", "@types/react-dom": "^19.2.3", "tailwindcss": "^4.1.0", "@tailwindcss/postcss": "^4.1.0" }
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "node scripts/preview.mjs",
+    "lint": "tsc --noEmit",
+    "test:db": "node tests/database.mjs",
+    "test:client": "node tests/client.mjs",
+    "test": "npm run test:client && npm run test:db && npm run test:push",
+    "test:push": "node tests/push.mjs"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "lucide-react": "1.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.19.19",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.1.0",
+    "@tailwindcss/postcss": "^4.1.0",
+    "@electric-sql/pglite": "0.3.14"
+  }
 }
