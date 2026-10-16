@@ -1,6 +1,6 @@
 # ყვავილო
 
-Georgian flower gifting application. Cloudflare Pages serves the frontend; Supabase provides authentication, Postgres, private photo storage, and scheduled reminder functions.
+Georgian flower gifting application. A Cloudflare Worker serves the static frontend; Supabase provides authentication, Postgres, private photo storage, and scheduled reminder functions.
 
 ## Current implementation and launch status
 
@@ -17,16 +17,16 @@ No live Supabase project, payment credentials or push secrets were supplied. Loc
 3. In Auth, enable email/password and email confirmation. Set the Site URL to the published Cloudflare domain. Add the exact production `/account` URL and local `http://127.0.0.1:3000/account` to the redirect allowlist for password recovery. Configure production SMTP with your sender domain before launching registration to customers.
 4. Obtain the project URL and public anon key from the project API settings. Never use the service-role key in frontend variables.
 
-## 2. Cloudflare Pages deployment
+## 2. Cloudflare Worker deployment
 
 - Build command: `npm run build`
-- Build output directory: `out`
+- Deploy command: `npm run deploy`
 - Root directory: the repository root (`/`)
 - Node version: 22 or later
 - Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in Production and Preview environments. Add `NEXT_PUBLIC_VAPID_PUBLIC_KEY` when push is configured.
 - Redeploy after changing any `NEXT_PUBLIC_` variable: Next embeds these values at build time.
-- This repository now exports HTML for Pages; it does not need `wrangler deploy`. The account API runs on Supabase, not on a Next server.
-- `public/_redirects` maps dynamic person/bouquet URLs to a static app shell. Client navigation preserves `/people/<id>` and `/flowers/<id>` paths, including direct visits and refreshes.
+- `wrangler.jsonc` deploys the generated `out` directory as Worker static assets. It deliberately avoids Cloudflare's automatic OpenNext conversion, which requires a server build that this static export does not produce.
+- The Worker maps clean static URLs and unknown profile/bouquet URLs to the app shell, so `/people/<id>` and `/flowers/<id>` continue to work on direct visits and refreshes.
 
 The landing page remains visible without configuration. Account creation is unavailable until the project URL/key are configured. Old prototype browser data is deliberately not imported into real accounts.
 
@@ -68,7 +68,7 @@ npm run build
 npm start
 ```
 
-`npm start` previews the exported Pages site with equivalent profile/bouquet rewrites. For direct dynamic route refreshes, this export preview is the reliable production-like check; Next's development server may reject paths not included in generateStaticParams.
+`npm start` previews the exported static site with equivalent profile/bouquet rewrites. `npm run preview:worker` runs the Cloudflare Worker static-asset configuration locally. For direct dynamic route refreshes, this export preview is the reliable production-like check; Next's development server may reject paths not included in generateStaticParams.
 
 `tests/database.mjs` uses PGlite (real PostgreSQL in WASM) with local Supabase auth/storage schema stubs. It checks two-account isolation, private storage rules, standard/custom dates, server-side prices, order retry idempotency, staff fulfillment and reminder deduplication. `tests/client.mjs` checks request shapes, token refresh concurrency, failed requests and differential writes. `tests/push.mjs` verifies cron authorization, push delivery failures and endpoint restrictions using a stub sender. These tests do not replace live Supabase, SMTP, payment-provider or real-device tests.
 
