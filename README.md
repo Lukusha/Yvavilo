@@ -32,6 +32,8 @@ The landing page remains visible without configuration. Account creation is unav
 
 ## 3. Activate products and staff access
 
+The eight supplied bouquets are visible in the landing-page collection at prices exactly 30% above the supplied Florarium prices. Run `supabase/collection.sql` to import them into the account catalog, then verify supplier availability and flower composition before activating them. See `docs/collection-images.md` for asset locations and editing prompts.
+
 In Supabase's table editor, inspect `products.data`, set the actual price, and turn `active` on only for available products. `products.data` contains the name, image path, price, flower composition and descriptions. Changes appear when the catalog reloads. Deactivated products remain readable for previous orders; they cannot be ordered.
 
 Register the business owner's account, then grant staff access in the SQL editor:
