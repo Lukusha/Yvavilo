@@ -1,7 +1,7 @@
 import { flowerLifespans } from '@/data/flowers';
 import type { Bouquet, FlowerDelivery, Occasion } from '@/types';
 import { georgianDate } from '@/lib/locale';
-export function estimatedDays(bouquet: Bouquet) { return Math.round(bouquet.stems.reduce((sum,s)=>sum+flowerLifespans[s.type]*s.weight,0)/bouquet.stems.reduce((sum,s)=>sum+s.weight,0)); }
+export function estimatedDays(bouquet: Bouquet) { if(bouquet.lifespanDays)return bouquet.lifespanDays;const weight=bouquet.stems.reduce((sum,s)=>sum+s.weight,0);return weight?Math.round(bouquet.stems.reduce((sum,s)=>sum+flowerLifespans[s.type]*s.weight,0)/weight):7; }
 export function flowerState(delivery: FlowerDelivery, bouquet: Bouquet, now = new Date()) {
  const lifespan = delivery.estimatedLifespanDays ?? estimatedDays(bouquet);
  const delivered = new Date(delivery.deliveredAt);

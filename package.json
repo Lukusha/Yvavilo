@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler d1 migrations apply yvavilo-db --remote && wrangler deploy",
     "preview:worker": "wrangler dev",
     "start": "node scripts/preview.mjs",
     "lint": "tsc --noEmit",

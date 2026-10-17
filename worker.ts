@@ -3,7 +3,8 @@ interface D1Statement{bind(...values:SqlValue[]):D1Statement;first<T=Record<stri
 interface D1Database{prepare(sql:string):D1Statement;batch(statements:D1Statement[]):Promise<unknown>}
 interface Env{DB:D1Database;ASSETS:{fetch(request:Request):Promise<Response>}}
 type UserRow={id:string;email:string;name:string;password_hash:string;salt:string;iterations:number};
-type AuthUser={id:string;email:string;name:string};
+type StaffRole='admin'|'operator';
+type AuthUser={id:string;email:string;name:string;staffRole?:StaffRole};
 type RecordRow={id:string;data:string;recipient_id:string|null;created_at:string};
 
 const COOKIE='yvavilo_session';
@@ -29,11 +30,11 @@ const parseCookies=(request:Request)=>Object.fromEntries((request.headers.get('C
 const sessionCookie=(request:Request,token:string,maxAge=SESSION_DAYS*86400)=>`${COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${new URL(request.url).protocol==='https:'?'; Secure':''}`;
 async function body(request:Request){try{return await request.json() as Record<string,any>}catch{return fail(400,'მონაცემების ფორმატი არასწორია.')}}
 function assertMutationOrigin(request:Request){const origin=request.headers.get('Origin');if(origin&&new URL(origin).host!==new URL(request.url).host)fail(403,'მოთხოვნა დაბლოკილია.')}
-const publicUser=(user:{id:string;email:string;name:string}):AuthUser=>({id:user.id,email:user.email,name:user.name});
+const publicUser=(user:AuthUser):AuthUser=>({id:user.id,email:user.email,name:user.name,...(user.staffRole?{staffRole:user.staffRole}:{})});
 async function authenticate(request:Request,env:Env):Promise<AuthUser>{
  const token=parseCookies(request)[COOKIE];if(!token)fail(401,'გთხოვთ, შეხვიდეთ ანგარიშში.');
  const tokenHash=await sha256(token);
- const user=await env.DB.prepare(`select u.id,u.email,u.name from sessions s join users u on u.id=s.user_id where s.token_hash=? and s.expires_at>unixepoch()`).bind(tokenHash).first<AuthUser>();
+ const user=await env.DB.prepare(`select u.id,u.email,u.name,st.role as staffRole from sessions s join users u on u.id=s.user_id left join staff st on st.user_id=u.id where s.token_hash=? and s.expires_at>unixepoch()`).bind(tokenHash).first<AuthUser>();
  if(!user)throw new ApiError(401,'სესია დასრულდა. გთხოვთ, ხელახლა შეხვიდეთ.');return user;
 }
 async function createSession(request:Request,env:Env,user:AuthUser){
@@ -117,13 +118,37 @@ async function placeOrder(request:Request,env:Env){
  const notification={id:`order-${id}`,kind:'delivery',title:'შეკვეთის მოთხოვნა მიღებულია',detail:'მოთხოვნა ელოდება დადასტურებას. გადახდა ჯერ არ შესრულებულა.',recipientId:recipient.id,read:false};
  await env.DB.batch([env.DB.prepare("insert into records(user_id,kind,id,recipient_id,data,created_at) values(?,'orders',?,?,?,unixepoch())").bind(user.id,id,recipient.id,JSON.stringify(order)),env.DB.prepare("insert into records(user_id,kind,id,recipient_id,data,created_at) values(?,'notifications',?,?,?,unixepoch())").bind(user.id,notification.id,recipient.id,JSON.stringify(notification))]);return json(order,201);
 }
-async function requireStaff(request:Request,env:Env){const user=await authenticate(request,env);if(!await env.DB.prepare('select user_id from staff where user_id=?').bind(user.id).first())fail(403,'წვდომა შეზღუდულია.');return user}
+async function requireStaff(request:Request,env:Env,roles:StaffRole[]=['admin','operator']){const user=await authenticate(request,env);if(!user.staffRole||!roles.includes(user.staffRole))fail(403,'წვდომა შეზღუდულია.');return {user,role:user.staffRole}}
+async function audit(env:Env,actor:string,action:string,targetType:string,targetId:string,detail=''){await env.DB.prepare('insert into audit_log(id,actor_user_id,action,target_type,target_id,detail) values(?,?,?,?,?,?)').bind(crypto.randomUUID(),actor,action,targetType,targetId,detail.slice(0,500)).run()}
 async function staffOrders(request:Request,env:Env){await requireStaff(request,env);const {results}=await env.DB.prepare("select r.data,u.email,u.name from records r join users u on u.id=r.user_id where r.kind='orders' order by r.created_at desc").all<{data:string;email:string;name:string}>();return json(results.map(row=>({...parseData(row.data),customerEmail:row.email,customerName:row.name})))}
+async function adminOverview(request:Request,env:Env){
+ const access=await requireStaff(request,env);
+ const [ordersResult,productsResult,customersResult,staffResult,auditResult]=await Promise.all([
+  env.DB.prepare("select r.data,u.email,u.name from records r join users u on u.id=r.user_id where r.kind='orders' order by r.created_at desc limit 300").all<{data:string;email:string;name:string}>(),
+  env.DB.prepare('select data,active from products order by created_at asc').all<{data:string;active:number}>(),
+  env.DB.prepare("select u.id,u.name,u.email,u.created_at,(select count(*) from records r where r.user_id=u.id and r.kind='people') people_count,(select count(*) from records r where r.user_id=u.id and r.kind='orders') orders_count from users u order by u.created_at desc limit 200").all<{id:string;name:string;email:string;created_at:number;people_count:number;orders_count:number}>(),
+  env.DB.prepare('select u.id,u.name,u.email,s.role from staff s join users u on u.id=s.user_id order by u.name').all<{id:string;name:string;email:string;role:StaffRole}>(),
+  env.DB.prepare('select a.id,a.action,a.target_type,a.target_id,a.detail,a.created_at,u.name actor_name from audit_log a join users u on u.id=a.actor_user_id order by a.created_at desc limit 100').all<{id:string;action:string;target_type:string;target_id:string;detail:string;created_at:number;actor_name:string}>()
+ ]);
+ const orders:Array<Record<string,any>>=ordersResult.results.map(row=>({...parseData<Record<string,any>>(row.data),customerEmail:row.email,customerName:row.name}));
+ const delivered=orders.filter(order=>order.status==='Delivered');
+ return json({role:access.role,currentUserEmail:access.user.email,stats:{customers:customersResult.results.length,orders:orders.length,pending:orders.filter(order=>order.status==='Pending').length,revenue:delivered.reduce((sum,order)=>sum+Number(order.price||0),0)},orders,products:productsResult.results.map(row=>({...parseData(row.data),available:Boolean(row.active)})),customers:customersResult.results.map(row=>({id:row.id,name:row.name,email:row.email,createdAt:row.created_at,peopleCount:row.people_count,ordersCount:row.orders_count})),staff:staffResult.results,audit:auditResult.results.map(row=>({id:row.id,action:row.action,targetType:row.target_type,targetId:row.target_id,detail:row.detail,createdAt:row.created_at,actorName:row.actor_name}))});
+}
 async function fulfillOrder(request:Request,env:Env){
- assertMutationOrigin(request);await requireStaff(request,env);const payload=await body(request),id=String(payload.order_id||''),status=String(payload.next_status||'');const row=await env.DB.prepare("select user_id,recipient_id,data from records where kind='orders' and id=?").bind(id).first<{user_id:string;recipient_id:string;data:string}>();if(!row)throw new ApiError(404,'შეკვეთა ვერ მოიძებნა.');const order=parseData(row.data),allowed=(order.status==='Pending'&&['Confirmed','Cancelled'].includes(status))||(['Confirmed','Scheduled'].includes(order.status)&&['Delivered','Cancelled'].includes(status));if(!allowed)fail(400,'სტატუსის ცვლილება არ არის დაშვებული.');order.status=status;
+ assertMutationOrigin(request);const access=await requireStaff(request,env);const payload=await body(request),id=String(payload.order_id||''),status=String(payload.next_status||'');const row=await env.DB.prepare("select user_id,recipient_id,data from records where kind='orders' and id=?").bind(id).first<{user_id:string;recipient_id:string;data:string}>();if(!row)throw new ApiError(404,'შეკვეთა ვერ მოიძებნა.');const order=parseData(row.data),allowed=(order.status==='Pending'&&['Confirmed','Cancelled'].includes(status))||(order.status==='Confirmed'&&['Scheduled','Delivered','Cancelled'].includes(status))||(order.status==='Scheduled'&&['Delivered','Cancelled'].includes(status));if(!allowed)fail(400,'სტატუსის ცვლილება არ არის დაშვებული.');const previous=order.status;order.status=status;
  const statements:D1Statement[]=[env.DB.prepare("update records set data=? where user_id=? and kind='orders' and id=?").bind(JSON.stringify(order),row.user_id,id)];
  if(status==='Delivered'){const delivery={id:`delivery-${id}`,recipientId:row.recipient_id,bouquetId:order.bouquetId,deliveredAt:new Date().toISOString(),message:order.message};statements.push(env.DB.prepare("insert or ignore into records(user_id,kind,id,recipient_id,data,created_at) values(?,'deliveries',?,?,?,unixepoch())").bind(row.user_id,delivery.id,row.recipient_id,JSON.stringify(delivery)))}
- const notification={id:`status-${id}-${status}`,kind:'delivery',title:status==='Delivered'?'თქვენი ყვავილები მიტანილია':status==='Confirmed'?'თქვენი შეკვეთა დადასტურებულია':'თქვენი შეკვეთა გაუქმებულია',detail:'შეამოწმეთ შეკვეთის დეტალები.',recipientId:row.recipient_id,read:false};statements.push(env.DB.prepare("insert or ignore into records(user_id,kind,id,recipient_id,data,created_at) values(?,'notifications',?,?,?,unixepoch())").bind(row.user_id,notification.id,row.recipient_id,JSON.stringify(notification)));await env.DB.batch(statements);return json({ok:true});
+ const titles:Record<string,string>={Delivered:'თქვენი ყვავილები მიტანილია',Confirmed:'თქვენი შეკვეთა დადასტურებულია',Scheduled:'თქვენი შეკვეთა მიწოდებისთვის დაიგეგმა',Cancelled:'თქვენი შეკვეთა გაუქმებულია'};const notification={id:`status-${id}-${status}`,kind:'delivery',title:titles[status],detail:'შეამოწმეთ შეკვეთის დეტალები.',recipientId:row.recipient_id,read:false};statements.push(env.DB.prepare("insert or ignore into records(user_id,kind,id,recipient_id,data,created_at) values(?,'notifications',?,?,?,unixepoch())").bind(row.user_id,notification.id,row.recipient_id,JSON.stringify(notification)));await env.DB.batch(statements);await audit(env,access.user.id,'order_status','order',id,`${previous} → ${status}`);return json({ok:true});
+}
+async function adminProduct(request:Request,env:Env){
+ assertMutationOrigin(request);const access=await requireStaff(request,env,['admin']);const payload=await body(request),input=payload.product as Record<string,any>,id=String(input?.id||'').trim();if(!id||id.length>120)fail(400,'პროდუქტის ნომერი არასწორია.');const existing=await env.DB.prepare('select id from products where id=?').bind(id).first();if(!existing)fail(404,'პროდუქტი ვერ მოიძებნა.');
+ const name=String(input.name||'').trim(),description=String(input.description||'').trim(),bestFor=String(input.bestFor||'').trim(),image=String(input.image||'').trim(),price=Number(input.price),lifespanDays=Number(input.lifespanDays);if(!name||name.length>150||!description||description.length>800||!bestFor||bestFor.length>150)fail(400,'პროდუქტის ტექსტები სრულად შეავსეთ.');if(!Number.isFinite(price)||price<=0||price>100000)fail(400,'მიუთითეთ სწორი ფასი.');if(!Number.isInteger(lifespanDays)||lifespanDays<1||lifespanDays>30)fail(400,'სიახლის დღეები უნდა იყოს 1-დან 30-მდე.');if(!/^\/images\/[a-zA-Z0-9_./-]+$/.test(image))fail(400,'გამოიყენეთ საიტზე ატვირთული სურათის მისამართი.');
+ const categories=Array.isArray(input.category)?input.category.map(String).map(value=>value.trim()).filter(Boolean).slice(0,12):[];const flowerTypes=['rose','tulip','peony','lily','orchid','sunflower','carnation'];const flowerType=flowerTypes.includes(String(input.flowerType))?String(input.flowerType):'rose';const product={id,name,image,price,lifespanDays,stems:[{type:flowerType,weight:1}],bestFor,category:categories,description};const active=input.available!==false;await env.DB.prepare('update products set data=?,active=? where id=?').bind(JSON.stringify(product),active?1:0,id).run();await audit(env,access.user.id,'product_update','product',id,`${name} · ${price} ₾ · ${active?'active':'inactive'}`);return json({...product,available:active});
+}
+async function adminStaff(request:Request,env:Env){
+ assertMutationOrigin(request);const access=await requireStaff(request,env,['admin']);const payload=await body(request),action=String(payload.action||''),email=normalizeEmail(payload.email),role:StaffRole=payload.role==='operator'?'operator':'admin';const found=await env.DB.prepare('select id,email,name from users where email=?').bind(email).first<{id:string;email:string;name:string}>();if(!found)throw new ApiError(404,'ამ ელფოსტით რეგისტრირებული მომხმარებელი ვერ მოიძებნა.');const target=found;
+ if(action==='remove'){if(target.id===access.user.id)fail(400,'საკუთარ ადმინისტრატორის წვდომას ვერ წაშლით.');await env.DB.prepare('delete from staff where user_id=?').bind(target.id).run();await audit(env,access.user.id,'staff_remove','staff',target.id,target.email);return json({ok:true})}
+ if(!['add','update'].includes(action))fail(400,'მოქმედება არასწორია.');if(target.id===access.user.id&&role!=='admin')fail(400,'საკუთარ ადმინისტრატორის როლს ვერ შეცვლით.');await env.DB.prepare('insert into staff(user_id,role) values(?,?) on conflict(user_id) do update set role=excluded.role').bind(target.id,role).run();await audit(env,access.user.id,'staff_role','staff',target.id,`${target.email} · ${role}`);return json({ok:true});
 }
 async function api(request:Request,env:Env){
  const url=new URL(request.url),path=url.pathname,method=request.method;
@@ -138,6 +163,9 @@ async function api(request:Request,env:Env){
  if(path==='/api/orders'&&method==='POST')return placeOrder(request,env);
  const store=path.match(/^\/api\/store\/([^/]+)$/);if(store&&method==='GET')return listStore(request,env,store[1]);if(store&&method==='PUT')return replaceStore(request,env,store[1]);
  if(path==='/api/rpc/staff_orders'&&method==='POST')return staffOrders(request,env);
+ if(path==='/api/rpc/admin_overview'&&method==='POST')return adminOverview(request,env);
+ if(path==='/api/rpc/admin_product'&&method==='POST')return adminProduct(request,env);
+ if(path==='/api/rpc/admin_staff'&&method==='POST')return adminStaff(request,env);
  if(path==='/api/rpc/fulfill_order'&&method==='POST')return fulfillOrder(request,env);
  return json({message:'მისამართი ვერ მოიძებნა.'},404);
 }
