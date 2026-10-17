@@ -1,1 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="110" fill="#203e45"/><g fill="none" stroke="#f5eade" stroke-width="16"><ellipse cx="256" cy="200" rx="55" ry="100"/><ellipse cx="256" cy="200" rx="55" ry="100" transform="rotate(72 256 256)"/><ellipse cx="256" cy="200" rx="55" ry="100" transform="rotate(144 256 256)"/><ellipse cx="256" cy="200" rx="55" ry="100" transform="rotate(216 256 256)"/><ellipse cx="256" cy="200" rx="55" ry="100" transform="rotate(288 256 256)"/></g><circle cx="256" cy="256" r="25" fill="#d9ad90"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="ყვავილო">
+  <defs>
+    <radialGradient id="background" cx="40%" cy="32%" r="78%">
+      <stop offset="0" stop-color="#674151"/>
+      <stop offset="1" stop-color="#3b2631"/>
+    </radialGradient>
+    <linearGradient id="petal" x1="0" y1="0" x2="0.78" y2="1">
+      <stop stop-color="#fffaf3"/>
+      <stop offset="1" stop-color="#eadbd2"/>
+    </linearGradient>
+    <radialGradient id="heart">
+      <stop stop-color="#e0bd8c"/>
+      <stop offset="1" stop-color="#a17c53"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#background)"/>
+  <g fill="url(#petal)" stroke="#3b2631" stroke-width="12" stroke-linejoin="round">
+    <ellipse cx="256" cy="170" rx="53" ry="92"/>
+    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(72 256 256)"/>
+    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(144 256 256)"/>
+    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(216 256 256)"/>
+    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(288 256 256)"/>
+  </g>
+  <circle cx="256" cy="256" r="45" fill="#3b2631"/>
+  <circle cx="256" cy="256" r="32" fill="url(#heart)"/>
+  <circle cx="246" cy="246" r="8" fill="#f6e8cf" opacity=".55"/>
+</svg>
