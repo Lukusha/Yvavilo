@@ -1,27 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="ყვავილო">
-  <defs>
-    <radialGradient id="background" cx="40%" cy="32%" r="78%">
-      <stop offset="0" stop-color="#674151"/>
-      <stop offset="1" stop-color="#3b2631"/>
-    </radialGradient>
-    <linearGradient id="petal" x1="0" y1="0" x2="0.78" y2="1">
-      <stop stop-color="#fffaf3"/>
-      <stop offset="1" stop-color="#eadbd2"/>
-    </linearGradient>
-    <radialGradient id="heart">
-      <stop stop-color="#e0bd8c"/>
-      <stop offset="1" stop-color="#a17c53"/>
-    </radialGradient>
-  </defs>
-  <rect width="512" height="512" fill="url(#background)"/>
-  <g fill="url(#petal)" stroke="#3b2631" stroke-width="12" stroke-linejoin="round">
-    <ellipse cx="256" cy="170" rx="53" ry="92"/>
-    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(72 256 256)"/>
-    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(144 256 256)"/>
-    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(216 256 256)"/>
-    <ellipse cx="256" cy="170" rx="53" ry="92" transform="rotate(288 256 256)"/>
+  <rect width="512" height="512" fill="#321e28"/>
+  <circle cx="256" cy="256" r="184" fill="none" stroke="#c29b6c" stroke-width="3" opacity=".5"/>
+  <g fill="none" stroke="#f3e9dd" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M256 249C216 224 207 172 225 131C234 110 246 94 256 84C266 94 278 110 287 131C305 172 296 224 256 249Z"/>
+    <path d="M256 249C216 224 207 172 225 131C234 110 246 94 256 84C266 94 278 110 287 131C305 172 296 224 256 249Z" transform="rotate(60 256 256)"/>
+    <path d="M256 249C216 224 207 172 225 131C234 110 246 94 256 84C266 94 278 110 287 131C305 172 296 224 256 249Z" transform="rotate(120 256 256)"/>
+    <path d="M256 249C216 224 207 172 225 131C234 110 246 94 256 84C266 94 278 110 287 131C305 172 296 224 256 249Z" transform="rotate(180 256 256)"/>
+    <path d="M256 249C216 224 207 172 225 131C234 110 246 94 256 84C266 94 278 110 287 131C305 172 296 224 256 249Z" transform="rotate(240 256 256)"/>
+    <path d="M256 249C216 224 207 172 225 131C234 110 246 94 256 84C266 94 278 110 287 131C305 172 296 224 256 249Z" transform="rotate(300 256 256)"/>
   </g>
-  <circle cx="256" cy="256" r="45" fill="#3b2631"/>
-  <circle cx="256" cy="256" r="32" fill="url(#heart)"/>
-  <circle cx="246" cy="246" r="8" fill="#f6e8cf" opacity=".55"/>
+  <circle cx="256" cy="256" r="35" fill="#321e28" stroke="#c29b6c" stroke-width="8"/>
+  <circle cx="256" cy="256" r="8" fill="#f3e9dd"/>
 </svg>
