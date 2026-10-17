@@ -8,7 +8,7 @@ type RecordRow={id:string;data:string;recipient_id:string|null;created_at:string
 
 const COOKIE='yvavilo_session';
 const SESSION_DAYS=30;
-const ITERATIONS=120000;
+const ITERATIONS=50000;
 const kinds=['people','orders','deliveries','notifications','occasions'] as const;
 type Kind=typeof kinds[number];
 class ApiError extends Error{constructor(public status:number,message:string){super(message)}}
