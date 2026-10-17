@@ -171,5 +171,5 @@ async function api(request:Request,env:Env){
 }
 
 export default {async fetch(request:Request,env:Env):Promise<Response>{
- try{if(new URL(request.url).pathname.startsWith('/api/'))return await api(request,env);return env.ASSETS.fetch(request)}catch(error){if(error instanceof ApiError)return json({message:error.message},error.status);console.error(error);return json({message:'სერვერის შეცდომა. სცადეთ მოგვიანებით.'},500)}
+ try{const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return await api(request,env);if(/^\/(people|flowers)\/[^/]+\/?$/.test(url.pathname)){url.pathname='/space';return env.ASSETS.fetch(new Request(url,request))}return env.ASSETS.fetch(request)}catch(error){if(error instanceof ApiError)return json({message:error.message},error.status);console.error(error);return json({message:'სერვერის შეცდომა. სცადეთ მოგვიანებით.'},500)}
 }};
