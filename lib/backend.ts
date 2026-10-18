@@ -28,7 +28,7 @@ export async function writeStore<T>(store:StoreKey,value:T,_previous:T){await ap
 export async function photoUrl(path:string){return path}
 export async function saveRecipient(person:Recipient,custom?:{id?:string;name:string;date:string}){return api<Recipient>('/api/people',{method:'POST',body:JSON.stringify({person,custom:custom||null})})}
 export async function submitOrder(order:Omit<Order,'status'|'createdAt'|'price'>){return api<Order>('/api/orders',{method:'POST',body:JSON.stringify(order)})}
-export type GuestOrderInput={id:string;bouquetId:string;occasion:string;message:string;deliveryDate:string;deliveryTime:string;zone:string;address:string;recipientName:string;recipientPhone:string;customerName:string;customerEmail:string;customerPhone:string};
+export type GuestOrderInput={id:string;bouquetId?:string;items?:import('@/types').BagItem[];occasion:string;message:string;deliveryDate:string;deliveryTime:string;zone:string;address:string;recipientName:string;recipientPhone:string;customerName:string;customerEmail:string;customerPhone:string};
 export async function submitGuestOrder(order:GuestOrderInput){return api<{order:Order;claimToken:string}>('/api/guest/orders',{method:'POST',body:JSON.stringify(order)})}
 export async function trackGuestOrder(id:string,token:string){return api<Order>(`/api/guest/orders/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}`)}
 export async function claimGuestOrder(token:string){return api<{ok:boolean;orderId:string}>('/api/guest/claim',{method:'POST',body:JSON.stringify({token})})}

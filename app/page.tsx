@@ -1,3 +1,4 @@
 import { LandingPage } from '@/components/app';
 import { AuthGate } from '@/components/auth-gate';
-export default function Page() { return <AuthGate landing><LandingPage /></AuthGate>; }
+import { CatalogProvider } from '@/lib/catalog';
+export default function Page() { return <AuthGate landing><CatalogProvider><LandingPage /></CatalogProvider></AuthGate>; }

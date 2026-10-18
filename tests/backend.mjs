@@ -20,6 +20,18 @@ const guest=await call('/api/guest/orders',{method:'POST',body:{id:crypto.random
 assert.equal(guest.data.order.price,109.5);
 const tracked=await call(`/api/guest/orders/${guest.data.order.id}?token=${encodeURIComponent(guest.data.claimToken)}`);
 assert.equal(tracked.data.status,'Pending');
+const bagOrder=await call('/api/guest/orders',{method:'POST',body:{id:crypto.randomUUID(),items:[{key:'one',bouquetId:'everyday',size:'grand',custom:{accent:'rose',wrapping:'sage',ribbon:'terracotta',note:'სიყვარულით'}},{key:'two',bouquetId:'garden',size:'standard'}],occasion:'Just because',message:'',deliveryDate:delivery,deliveryTime:'Afternoon, 12pm–4pm',zone:'pickup',address:'',recipientName:'მარიამ',recipientPhone:'+995 555 555 111',customerName:'ტესტი',customerEmail:`bag-${unique}@example.com`,customerPhone:'+995 555 555 222'}});
+assert.equal(bagOrder.data.order.items.length,2);
+assert.equal(bagOrder.data.order.productPrice,274.8);
+assert.equal(bagOrder.data.order.deliveryFee,0);
+assert.equal(bagOrder.data.order.price,274.8);
+assert.equal((await call(`/api/guest/orders/${bagOrder.data.order.id}?token=${encodeURIComponent(bagOrder.data.claimToken)}`)).data.items.length,2);
+const bagSignup=await call('/api/auth/signup',{method:'POST',body:{name:'კალათის მომხმარებელი',email:`bag-${unique}@example.com`,password,claimToken:bagOrder.data.claimToken}});
+assert.equal((await call('/api/store/orders',{cookie:bagSignup.cookie})).data[0].items.length,2);
+const existingCustomerOrder=await call('/api/guest/orders',{method:'POST',body:{id:crypto.randomUUID(),bouquetId:'everyday',occasion:'Just because',message:'',deliveryDate:delivery,deliveryTime:'Morning, 9am–12pm',zone:'pickup',recipientName:'მარიამ',recipientPhone:'+995 555 555 111',customerName:'წინასწარი რეგისტრაცია',customerEmail:`early-${unique}@example.com`,customerPhone:'+995 555 555 222'}});
+await call('/api/guest/claim',{method:'POST',cookie:early.cookie,body:{token:existingCustomerOrder.data.claimToken}});
+assert.equal((await call('/api/store/orders',{cookie:early.cookie})).data.length,1);
+await assert.rejects(()=>call('/api/guest/orders',{method:'POST',body:{id:crypto.randomUUID(),items:[{key:'bad',bouquetId:'everyday',size:'standard',custom:{accent:'free',wrapping:'ivory',ribbon:'linen'}}],occasion:'Just because',message:'',deliveryDate:delivery,deliveryTime:'Morning, 9am–12pm',zone:'pickup',recipientName:'მარიამ',recipientPhone:'+995 555 555 111',customerName:'ტესტი',customerEmail:`bad-${unique}@example.com`,customerPhone:'+995 555 555 222'}}),error=>error.status===400);
 const support=await call('/api/support',{method:'POST',body:{name:'ტესტი',email,phone:'+995 555 222 333',orderId:guest.data.order.id,message:'სატესტო დახმარების მოთხოვნა'}});
 assert.ok(support.data.id);
 const signup=await call('/api/auth/signup',{method:'POST',body:{name:'ტესტი',email,password,claimToken:guest.data.claimToken}});
@@ -53,4 +65,4 @@ await call('/api/auth/logout',{method:'POST',cookie:signup.cookie});
 const login=await call('/api/auth/login',{method:'POST',body:{email,password:nextPassword}});
 assert.equal(login.data.user.email,email);
 
-console.log(JSON.stringify({guestOrder:true,tracking:true,registrationBeforeOrder:true,registrationAfterOrder:true,supportRequest:true,login:true,passwordChange:true,products:products.data.length,people:people.data.length,occasions:occasions.data.length,orders:2,isolation:true},null,2));
+console.log(JSON.stringify({guestOrder:true,bagOrder:true,serverPricing:true,pickup:true,tracking:true,registrationBeforeOrder:true,registrationAfterOrder:true,orderClaimByExistingCustomer:true,supportRequest:true,login:true,passwordChange:true,products:products.data.length,people:people.data.length,occasions:occasions.data.length,orders:2,isolation:true},null,2));

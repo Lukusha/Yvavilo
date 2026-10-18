@@ -34,9 +34,9 @@ export function AuthGate({children,landing=false,publicContent}:{children:React.
  if(landing)return <>{children}{open&&<div className="auth-overlay"><AuthPanel key={open} mode={open} onClose={()=>setOpen(null)} onAuthenticated={authenticated}/></div>}</>;
  if(checking)return <div className="auth-loading"><Flower2 size={34}/><p>თქვენი სივრცე იტვირთება...</p></div>;
  if(error)return <div className="auth-loading"><p role="alert">{error}</p><button className="btn btn-primary" onClick={()=>location.reload()}>ხელახლა ცდა</button></div>;
- const publicRoute=['/flowers','/send','/track','/support','/delivery','/terms','/privacy'].some(route=>pathname===route||pathname.startsWith(`${route}/`));
+ const publicRoute=['/flowers','/send','/bag','/track','/support','/delivery','/terms','/privacy'].some(route=>pathname===route||pathname.startsWith(`${route}/`));
  const informationRoute=['/support','/delivery','/terms','/privacy'].includes(pathname);
- if(publicContent&&(informationRoute||!session&&publicRoute))return <>{publicContent}{open&&<div className="auth-overlay"><AuthPanel key={open} mode={open} onClose={()=>setOpen(null)} onAuthenticated={authenticated}/></div>}</>;
+ if(publicContent&&(informationRoute||pathname==='/bag'||!session&&publicRoute))return <>{publicContent}{open&&<div className="auth-overlay"><AuthPanel key={open} mode={open} onClose={()=>setOpen(null)} onAuthenticated={authenticated}/></div>}</>;
  if(session)return <Fragment key={session.user.id}>{children}</Fragment>;
  return <div className="auth-page"><a className="auth-home" href="/">ყვავილო</a><AuthPanel mode="login" onAuthenticated={authenticated}/></div>;
 }
