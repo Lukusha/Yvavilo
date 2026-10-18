@@ -10,7 +10,8 @@ async function call(path,{method='GET',body,cookie}={}){
 
 const unique=Date.now();
 const email=`backend-${unique}@example.com`,password='FlowerTest!9',nextPassword='FlowerTest!10';
-await assert.rejects(()=>call('/api/auth/signup',{method:'POST',body:{name:'დაბლოკილი',email:`blocked-${unique}@example.com`,password}}),error=>error.status===400);
+const early=await call('/api/auth/signup',{method:'POST',body:{name:'წინასწარი რეგისტრაცია',email:`early-${unique}@example.com`,password}});
+assert.equal((await call('/api/store/people',{cookie:early.cookie})).data.length,0);
 const products=await call('/api/products');
 assert.equal(products.data.length,8);
 assert.ok(products.data.every(row=>row.active));
@@ -52,4 +53,4 @@ await call('/api/auth/logout',{method:'POST',cookie:signup.cookie});
 const login=await call('/api/auth/login',{method:'POST',body:{email,password:nextPassword}});
 assert.equal(login.data.user.email,email);
 
-console.log(JSON.stringify({guestOrder:true,tracking:true,registrationAfterOrder:true,directRegistrationBlocked:true,supportRequest:true,login:true,passwordChange:true,products:products.data.length,people:people.data.length,occasions:occasions.data.length,orders:2,isolation:true},null,2));
+console.log(JSON.stringify({guestOrder:true,tracking:true,registrationBeforeOrder:true,registrationAfterOrder:true,supportRequest:true,login:true,passwordChange:true,products:products.data.length,people:people.data.length,occasions:occasions.data.length,orders:2,isolation:true},null,2));

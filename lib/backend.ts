@@ -17,7 +17,7 @@ export async function getSession():Promise<Session|null>{
  try{return await api<Session>('/api/auth/session')}catch(error){if((error as {status?:number}).status===401)return null;throw error}
 }
 export async function requireSession(){const session=await getSession();if(!session)throw new Error('გთხოვთ, ხელახლა შეხვიდეთ ანგარიშში.');return session}
-export async function signUp(email:string,password:string,name:string,claimToken:string){const session=await api<Session>('/api/auth/signup',{method:'POST',body:JSON.stringify({email,password,name,claimToken})});window.dispatchEvent(new Event('auth-change'));return {session,needsEmailConfirmation:false}}
+export async function signUp(email:string,password:string,name:string,claimToken?:string){const session=await api<Session>('/api/auth/signup',{method:'POST',body:JSON.stringify({email,password,name,...(claimToken?{claimToken}:{})})});window.dispatchEvent(new Event('auth-change'));return {session,needsEmailConfirmation:false}}
 export async function signIn(email:string,password:string){const session=await api<Session>('/api/auth/login',{method:'POST',body:JSON.stringify({email,password})});window.dispatchEvent(new Event('auth-change'));return session}
 export async function signOut(){await api('/api/auth/logout',{method:'POST'});window.dispatchEvent(new Event('auth-change'));window.location.assign('/')}
 export async function resetPassword(){throw new Error('პაროლის ელფოსტით აღდგენა ჯერ არ არის ჩართული. ანგარიშში შესვლის შემდეგ პაროლის შეცვლა შეგიძლიათ.')}
